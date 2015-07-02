@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/ejml-0.23.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/javax.json-api-1.0-sources.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/javax.json.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/joda-time-2.1-sources.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/joda-time.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/jollyday-0.4.7-sources.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/jollyday.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/protobuf.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/stanford-corenlp-3.5.2-javadoc.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/stanford-corenlp-3.5.2-models.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/stanford-corenlp-3.5.2-sources.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/stanford-corenlp-3.5.2.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/xom-1.2.10-src.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/xom.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

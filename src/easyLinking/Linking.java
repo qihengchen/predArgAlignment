@@ -3,10 +3,8 @@ package easyLinking;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -27,31 +25,65 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.xml.sax.ErrorHandler;
 import org.xml.sax.SAXException;
-import org.xml.sax.SAXParseException;
-import org.xml.sax.helpers.*;
 import org.w3c.dom.Document;
-import org.w3c.dom.DocumentType;
-import org.w3c.dom.Entity;
-import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Element;
 
+import com.google.common.collect.Sets;
 
 public class Linking {
 	
-	// {tag:([token, doc],...)}
+	// {instance_id:([token, doc],...)}
 	private static HashMap<String, HashSet<String[]>> _coref = new HashMap<String, HashSet<String[]>>();
 	// {doc:{t_id:[token, feature],...}}   feature: markables node name. ACTION...
 	private static HashMap<String, HashMap<String, String[]>> _cluster = 
 			new HashMap<String, HashMap<String, String[]>>();
 	private static StanfordCoreNLP _pipeline;
+	private static HashSet<String> _G = new HashSet<String>();
+	private static HashSet<String> _H = new HashSet<String>();
 	
 	public static void main(String[] args) throws Exception {
-		readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/");
-		eval();
+		writeLinkedPercentage("/Users/Qiheng/Desktop/Summer 2015/linkedPercentage.txt");
+		/*
+		int i = 1;
+		while (i<15) {
+			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/", Integer.toString(i));
+			eval();
+			_G.clear();
+			_H.clear();
+			_coref.clear();
+			_cluster.clear();
+			i++;
+		}*/
+	}
+	
+	private static void writeLinkedPercentage(String output) throws ParserConfigurationException, 
+	SAXException, IOException {
+		PrintWriter writer = new PrintWriter(output);
+		int clusterNum = 1;
+		while (clusterNum <=45) {
+			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/", Integer.toString(clusterNum));
+			int count = 0;
+			for (HashSet<String[]> hs : _coref.values()) {
+				for (String[] s : hs) {
+					if (s[1].contains(clusterNum + "_1ecb.xml") || s[1].contains(clusterNum + "_1ecbplus.xml")) {
+						count += 1;
+						break;
+					}
+				}
+			}
+			writer.format("cluster %d:     %d     %d       %f%n", clusterNum, count, _coref.keySet().size(),
+					(double) count/_coref.keySet().size());
+			_coref.clear();
+			_cluster.clear();
+			clusterNum += 1;
+			if (clusterNum == 15 || clusterNum == 17) {
+				clusterNum += 1;
+			}
+		}
+		writer.close();
 	}
 
 	private static void init() {
@@ -62,6 +94,9 @@ public class Linking {
 	
 	// return lemmatized string of text
 	private static String lemmatize(String text) {
+		if (_pipeline == null) {
+			init();
+		}
 		Annotation document = new Annotation(text);
 		_pipeline.annotate(document);
 		String lemmatizedText = "";
@@ -76,38 +111,33 @@ public class Linking {
 	}
 	
 	// lemmatizeFile inputFile, function similar to lemmatize which acts on string
-		public static void lemmatizeFile(String inputFile, String outputFile) throws FileNotFoundException {
-			PrintWriter writer = new PrintWriter(outputFile);
-			if (_pipeline==null) {
-				init();
-			}
-			/*Properties props = new Properties();
-			props.setProperty("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
-			StanfordCoreNLP pipeline = new StanfordCoreNLP(props); */
-			
-			@SuppressWarnings("resource")
-			String text = new Scanner(new File(inputFile)).useDelimiter("//A").next();
-
-			Annotation document = new Annotation(text);
-			_pipeline.annotate(document);
-			// all sentences in this document
-			List<CoreMap> sentences = document.get(SentencesAnnotation.class);
-			for (CoreMap sentence : sentences) {
-				for (CoreLabel token : sentence.get(TokensAnnotation.class)) {
-					String word = token.get(LemmaAnnotation.class);
-					writer.print(word + " ");
-				}
-			}
-			writer.close();
+	public static void lemmatizeFile(String inputFile, String outputFile) throws FileNotFoundException {
+		PrintWriter writer = new PrintWriter(outputFile);
+		if (_pipeline==null) {
+			init();
 		}
+		@SuppressWarnings("resource")
+		String text = new Scanner(new File(inputFile)).useDelimiter("//A").next();
+		Annotation document = new Annotation(text);
+		_pipeline.annotate(document);
+		// all sentences in this document
+		List<CoreMap> sentences = document.get(SentencesAnnotation.class);
+		for (CoreMap sentence : sentences) {
+			for (CoreLabel token : sentence.get(TokensAnnotation.class)) {
+				String word = token.get(LemmaAnnotation.class);
+				writer.print(word + " ");
+			}
+		}
+		writer.close();
+	}
 	
 	@SuppressWarnings("resource")
 	// read dependencies from XML files, per cluster
-	public static void readCorpus(String dirPath) throws ParserConfigurationException, SAXException, IOException {
-		String clusterNum = "1";  // may be generalized as parameter
+	public static void readCorpus(String dirPath, String clusterNum) throws ParserConfigurationException, 
+	SAXException, IOException {
 		File folder = new File(dirPath + clusterNum + "/");
 		for (File file : folder.listFiles()) {
-			System.out.println(file.getName());
+			//System.out.println(file.getName());
 			
 			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			DocumentBuilder db = dbf.newDocumentBuilder();
@@ -146,7 +176,7 @@ public class Linking {
 			// get coref
 			NodeList CDCs = doc.getElementsByTagName("CROSS_DOC_COREF");
 			for (int i=0; i<CDCs.getLength(); i++) {
-				HashSet<String[]> tags = new HashSet<String[]>();
+				HashSet<String[]> instances = new HashSet<String[]>();
 				NodeList refs = CDCs.item(i).getChildNodes();
 				for (int j=1; j<refs.getLength(); j=j+2) {
 					// ref = source/target
@@ -162,48 +192,99 @@ public class Linking {
 								for (int l=1; l<element.getChildNodes().getLength(); l=l+2) {
 									Element anchor = (Element) element.getChildNodes().item(l);
 									String t_id = anchor.getAttribute("t_id");
-									phrase += (_cluster.get(file.getName()).get(t_id) + " ");
+									phrase += (_cluster.get(file.getName()).get(t_id)[0] + " ");
 									id += (file.getName() + "/" + t_id + " ");
 								}
 								phrase.trim();
 								id.trim();
 								String[] temp = {phrase, id};
-								tags.add(temp);
+								instances.add(temp);
 							}
 						}
-					} else {
+					} /*else {
 						// find tag_descriptor
-						
 						NodeList elements = doc.getElementsByTagName("Markables").item(0).getChildNodes();
 						for (int k=1; k<elements.getLength(); k=k+2) {
 							Element element = (Element) elements.item(k);
-							System.out.print(element.getAttribute("m_id") + " " + m_id + " ");
+							//System.out.print(element.getAttribute("m_id") + " " + m_id + " ");
 							if (element.getAttribute("m_id").equals(m_id)) {
-								
 								_coref.put(element.getAttribute("TAG_DESCRIPTOR"), tags);
 							}
 						}
-						System.out.println();
-					}
+						//System.out.println();
+					}*/
+				}
+				String note = CDCs.item(i).getAttributes().item(0).getNodeValue();
+				if (_coref.containsKey(note)) {
+					HashSet<String[]> temp = _coref.get(note);
+					temp.addAll(instances);
+					_coref.put(note, temp);
+				} else {
+					_coref.put(note, instances);
 				}
 			}
 		}
 	}
 	
 	public static void eval() {
-		// evaluate F-Score on stored data
-		ArrayList<String> G = new ArrayList<String>();   // "file/t_id -> file/t_id"
-		for (String key : _coref.keySet()) {
-			System.out.println();
-			System.out.println(key);
-			for (String[] s : _coref.get(key)) {
-				System.out.println(s[1]);
+		   // "file/t_id -> file/t_id"
+		for (HashSet<String[]> hs : _coref.values()) {   // [token, doc]
+			for (String[] mention : hs) {
+				if (mention[1].contains("_1ecb.xml") || mention[1].contains("_1ecbplus.xml")) {
+					for (String[] m : hs) {
+						if (!m[1].contains("_1ecb.xml") && !m[1].contains("_1ecbplus.xml")) {
+							_G.add(mention[1] + "-> " + m[1].trim());
+						}
+					}
+				}
 			}
 		}
-		// TODO: coref println results seem not correct
-		
-		ArrayList<String> H = new ArrayList<String>();
-		// TODO: call lemmatize()
-		
+		for (String docName : _cluster.keySet()) {
+			String text = "";
+			HashMap<String, String[]> doc = _cluster.get(docName);
+			for (int i=1; i<=doc.keySet().size(); i++) {
+				text += (doc.get(Integer.toString(i))[0] + " ");
+			}
+			//text = lemmatize(text);
+			String[] lemmatizedText = text.split(" ");
+			int j= 0;  // . . . lemmatized as ... shrinking the size of returned list
+			for (int i=1; i<=doc.keySet().size(); i++) {
+				doc.get(Integer.toString(i))[0] = lemmatizedText[j];
+				j += 1;
+				if (lemmatizedText[j-1].equals("...")) {
+					i += 2;
+				}
+			}
+		}
+		// _cluster already lemmatized
+		// TODO: for annotated words, find x_1...xml -> x_y...xml
+		for (String docName : _cluster.keySet()) {
+			if (docName.contains("_1ecb")) {
+				//System.out.println(docName);
+				for (String t_id : _cluster.get(docName).keySet()) {
+					String[] wordfeature = _cluster.get(docName).get(t_id);
+					if (!wordfeature[1].equals("")) {
+						//System.out.println(wordfeature[0] + "  is annotated");
+						for (String dn : _cluster.keySet()) {
+							if (!dn.contains("_1ecb")) {
+								for (String id : _cluster.get(dn).keySet()) {
+									String[] wf = _cluster.get(dn).get(id);
+									if (!wf[1].equals("") && wf[0].equals(wordfeature[0])) {
+										//System.out.println(wf[0] + "  matched");
+										_H.add(docName + "/" + t_id + " -> " + dn + "/" + id);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		int intersection = Sets.intersection(_G, _H).size();
+		System.out.println(intersection);
+		double precision = (double) intersection / _H.size();
+		double recall = (double) intersection / _G.size();
+		double F1 = 2*precision*recall / (precision+recall);
+		System.out.format("precision: %f   recall: %f   F1: %f%n", precision, recall, F1);
 	}
 }

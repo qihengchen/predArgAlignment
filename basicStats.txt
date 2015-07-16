@@ -1,0 +1,129 @@
+cluster  1: 1761  annotated      3553  tokens       0.495637
+            930   aligned        996   mentions     0.933735
+
+cluster  2: 1260  annotated      2894  tokens       0.435384
+            702   aligned        909   mentions     0.772277
+
+cluster  3: 1151  annotated      2487  tokens       0.462807
+            465   aligned        742   mentions     0.626685
+
+cluster  4: 493   annotated      1255  tokens       0.392829
+            246   aligned        318   mentions     0.773585
+
+cluster  5: 405   annotated      4171  tokens       0.097099
+            183   aligned        286   mentions     0.639860
+
+cluster  6: 749   annotated      4320  tokens       0.173380
+            316   aligned        537   mentions     0.588454
+
+cluster  7: 800   annotated      3548  tokens       0.225479
+            459   aligned        603   mentions     0.761194
+
+cluster  8: 888   annotated      7869  tokens       0.112848
+            369   aligned        577   mentions     0.639515
+
+cluster  9: 837   annotated      7803  tokens       0.107266
+            337   aligned        623   mentions     0.540931
+
+cluster 10: 471   annotated      4718  tokens       0.099830
+            164   aligned        296   mentions     0.554054
+
+cluster 11: 236   annotated      1222  tokens       0.193126
+            72    aligned        131   mentions     0.549618
+
+cluster 12: 473   annotated      3563  tokens       0.132753
+            223   aligned        265   mentions     0.841509
+
+cluster 13: 484   annotated      6861  tokens       0.070544
+            134   aligned        242   mentions     0.553719
+
+cluster 14: 425   annotated      1642  tokens       0.258831
+            124   aligned        206   mentions     0.601942
+
+cluster 16: 760   annotated      7889  tokens       0.096337
+            285   aligned        462   mentions     0.616883
+
+cluster 18: 657   annotated      6346  tokens       0.103530
+            312   aligned        431   mentions     0.723898
+
+cluster 19: 736   annotated      9095  tokens       0.080924
+            312   aligned        443   mentions     0.704289
+
+cluster 20: 834   annotated      4354  tokens       0.191548
+            241   aligned        426   mentions     0.565728
+
+cluster 21: 925   annotated      4292  tokens       0.215517
+            519   aligned        604   mentions     0.859272
+
+cluster 22: 704   annotated      5860  tokens       0.120137
+            324   aligned        418   mentions     0.775120
+
+cluster 23: 733   annotated      3438  tokens       0.213205
+            264   aligned        360   mentions     0.733333
+
+cluster 24: 782   annotated      3342  tokens       0.233992
+            305   aligned        392   mentions     0.778061
+
+cluster 25: 486   annotated      4302  tokens       0.112971
+            208   aligned        295   mentions     0.705085
+
+cluster 26: 586   annotated      8512  tokens       0.068844
+            246   aligned        326   mentions     0.754601
+
+cluster 27: 1381  annotated      4924  tokens       0.280463
+            268   aligned        991   mentions     0.270434
+
+cluster 28: 1950  annotated      5995  tokens       0.325271
+            305   aligned        1225  mentions     0.248980
+
+cluster 29: 1378  annotated      10534 tokens       0.130815
+            351   aligned        830   mentions     0.422892
+
+cluster 30: 1288  annotated      3677  tokens       0.350286
+            298   aligned        743   mentions     0.401077
+
+cluster 31: 1040  annotated      7402  tokens       0.140503
+            247   aligned        595   mentions     0.415126
+
+cluster 32: 1070  annotated      3484  tokens       0.307118
+            270   aligned        650   mentions     0.415385
+
+cluster 33: 1203  annotated      3972  tokens       0.302870
+            346   aligned        773   mentions     0.447607
+
+cluster 34: 1626  annotated      7220  tokens       0.225208
+            199   aligned        830   mentions     0.239759
+
+cluster 35: 1333  annotated      3488  tokens       0.382167
+            200   aligned        765   mentions     0.261438
+
+cluster 36: 1495  annotated      9015  tokens       0.165835
+            284   aligned        882   mentions     0.321995
+
+cluster 37: 1939  annotated      5314  tokens       0.364885
+            339   aligned        819   mentions     0.413919
+
+cluster 38: 749   annotated      2077  tokens       0.360616
+            154   aligned        248   mentions     0.620968
+
+cluster 39: 900   annotated      7051  tokens       0.127641
+            231   aligned        535   mentions     0.431776
+
+cluster 40: 745   annotated      4715  tokens       0.158006
+            162   aligned        400   mentions     0.405000
+
+cluster 41: 1004  annotated      6945  tokens       0.144564
+            272   aligned        506   mentions     0.537549
+
+cluster 42: 580   annotated      2418  tokens       0.239868
+            175   aligned        322   mentions     0.543478
+
+cluster 43: 1402  annotated      10661 tokens       0.131507
+            393   aligned        992   mentions     0.396169
+
+cluster 44: 1360  annotated      5473  tokens       0.248493
+            336   aligned        819   mentions     0.410256
+
+cluster 45: 1198  annotated      3623  tokens       0.330665
+            400   aligned        779   mentions     0.513479
+

@@ -1,4 +1,7 @@
 package easyLinking;
+//TODO: investigate why recall is low
+//TODO: compute F-score for P, A, and overall.
+//TODO: find least common words
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -35,56 +38,110 @@ import com.google.common.collect.Sets;
 
 public class Linking {
 	
-	// {instance_id:([token, doc],...)}
-	private static HashMap<String, HashSet<String[]>> _coref = new HashMap<String, HashSet<String[]>>();
-	// {doc:{t_id:[token, feature],...}}   feature: markables node name. ACTION...
-	private static HashMap<String, HashMap<String, String[]>> _cluster = 
-			new HashMap<String, HashMap<String, String[]>>();
+	// {note: {id:mentionspan}}
+	private static HashMap<String, HashMap<String, MentionSpan>> _coref = 
+			new HashMap<String, HashMap<String, MentionSpan>>();
+	private static HashMap<String, MentionSpan> _annotation = new HashMap<String, MentionSpan>();
+	private static HashMap<String, String> _cluster = new HashMap<String, String>();
+	private static HashMap<String, MentionSpan> _alignedMentions = new HashMap<String, MentionSpan>();
+	
 	private static StanfordCoreNLP _pipeline;
 	private static HashSet<String> _G = new HashSet<String>();
 	private static HashSet<String> _H = new HashSet<String>();
+	private static boolean _doLemmatize = false;
 	
 	public static void main(String[] args) throws Exception {
-		writeLinkedPercentage("/Users/Qiheng/Desktop/Summer 2015/linkedPercentage.txt");
-		/*
+		_doLemmatize = true;
+		
+		//writeLinkedPercentage("/Users/Qiheng/Desktop/Summer 2015/linkedPercentage2.txt");
+		
 		int i = 1;
-		while (i<15) {
-			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/", Integer.toString(i));
+		while (i==1) {
+			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/" + i);
+			linkMentions();
 			eval();
+			writeGH("/Users/Qiheng/Desktop/Summer 2015/experiment/GL.txt", 
+					"/Users/Qiheng/Desktop/Summer 2015/experiment/HL.txt");
+			//analyzeResults("/Users/Qiheng/Desktop/Summer 2015/experiment/analysis2.txt");
 			_G.clear();
 			_H.clear();
 			_coref.clear();
 			_cluster.clear();
 			i++;
-		}*/
+		}
 	}
 	
-	private static void writeLinkedPercentage(String output) throws ParserConfigurationException, 
-	SAXException, IOException {
-		PrintWriter writer = new PrintWriter(output);
-		int clusterNum = 1;
-		while (clusterNum <=45) {
-			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/", Integer.toString(clusterNum));
-			int count = 0;
-			for (HashSet<String[]> hs : _coref.values()) {
-				for (String[] s : hs) {
-					if (s[1].contains(clusterNum + "_1ecb.xml") || s[1].contains(clusterNum + "_1ecbplus.xml")) {
-						count += 1;
-						break;
+
+	// read tokens and annotations from XML files, as per cluster
+	public static void readCorpus(String dirPath) throws ParserConfigurationException, SAXException, IOException {
+		File folder = new File(dirPath + "/");
+		for (File file : folder.listFiles()) {
+			
+			//TODO: get it work on ecb.xml data
+			if (file.getName().endsWith("ecb.xml")) {
+				continue;
+			}
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			DocumentBuilder db = dbf.newDocumentBuilder();
+			Document doc = db.parse(file);
+			String text = "";
+			NodeList tokenList = doc.getElementsByTagName("token");
+			
+			// get text tokens
+			for (int i=0; i<tokenList.getLength(); i++) {
+				Element token = (Element) tokenList.item(i);
+				text += (token.getTextContent() + " ");
+				//String[] temp = {token.getTextContent(), ""};
+				//fileTokens.put(token.getAttribute("t_id"), temp);
+			}
+			_cluster.put(file.getName(), text.trim());
+			
+			// find all annotations -- "pred" or "arg"
+			NodeList annotations = doc.getElementsByTagName("Markables").item(0).getChildNodes();
+			for (int i=1; i<annotations.getLength(); i=i+2) {
+				// if nodes without TAG_DESCRIPTOR
+				Node node = annotations.item(i);
+				if (node.getChildNodes().getLength() > 1) {
+					String content = "";
+					String id = "";
+					String m_id = file.getName() + "/" + node.getAttributes().item(0).getTextContent();
+					NodeList anchors = node.getChildNodes();
+					for (int j=1; j<anchors.getLength(); j=j+2) {
+						Integer t_id = Integer.parseInt(anchors.item(j).getAttributes().item(0).getTextContent());
+						content += (_cluster.get(file.getName()).split(" ")[t_id-1] + " ");
+						id += (file.getName() + "/" + t_id + " ");
+					}
+					if (node.getNodeName().contains("ACTION") || node.getNodeName().contains("NEG")) {
+						//String anchor = node.getChildNodes().item(1).getAttributes().item(0).getTextContent();
+						_annotation.put(m_id, new MentionSpan(content, id, m_id, "pred"));
+					} else {
+						_annotation.put(m_id, new MentionSpan(content, id, m_id, "arg"));
 					}
 				}
 			}
-			writer.format("cluster %d:     %d     %d       %f%n", clusterNum, count, _coref.keySet().size(),
-					(double) count/_coref.keySet().size());
-			_coref.clear();
-			_cluster.clear();
-			clusterNum += 1;
-			if (clusterNum == 15 || clusterNum == 17) {
-				clusterNum += 1;
+			
+			// get cross_doc_coref
+			NodeList CDCs = doc.getElementsByTagName("CROSS_DOC_COREF");
+			for (int i=0; i<CDCs.getLength(); i++) {
+				String note = CDCs.item(i).getAttributes().item(0).getNodeValue();
+				NodeList refs = CDCs.item(i).getChildNodes();
+				for (int j=1; j<refs.getLength(); j=j+2) {
+					// ref = source/target
+					Node ref = refs.item(j);
+					String m_id = file.getName() + "/" + ref.getAttributes().item(0).getNodeValue();
+					if (ref.getNodeName().equals("source")) {
+						if (_coref.containsKey(note)) {
+							_coref.get(note).put(m_id, _annotation.get(m_id));
+						} else {
+							_coref.put(note, new HashMap<String, MentionSpan>());
+							_coref.get(note).put(m_id, _annotation.get(m_id));
+						}
+					}
+				}
 			}
 		}
-		writer.close();
 	}
+	
 
 	private static void init() {
 		Properties props = new Properties();
@@ -131,160 +188,196 @@ public class Linking {
 		writer.close();
 	}
 	
-	@SuppressWarnings("resource")
-	// read dependencies from XML files, per cluster
-	public static void readCorpus(String dirPath, String clusterNum) throws ParserConfigurationException, 
-	SAXException, IOException {
-		File folder = new File(dirPath + clusterNum + "/");
-		for (File file : folder.listFiles()) {
-			//System.out.println(file.getName());
+	
+	private static void linkMentions() {
+		for (String docName : _cluster.keySet()) {
+			System.out.println(docName);
+			String text = _cluster.get(docName);
 			
-			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-			DocumentBuilder db = dbf.newDocumentBuilder();
-			Document doc = db.parse(file);
-			HashMap<String, String[]> fileTokens = new HashMap<String, String[]>();
-			NodeList tokenList = doc.getElementsByTagName("token");
-			// get token text
-			for (int i=0; i<tokenList.getLength(); i++) {
-				Element token = (Element) tokenList.item(i);
-				String[] temp = {token.getTextContent(), ""};
-				fileTokens.put(token.getAttribute("t_id"), temp);
+			String[] old = text.split(" ");           // tokens
+			String[] res = new String[old.length];    // results
+			String[] now = text.split(" ");           // lemmatized tokens
+			
+			if (_doLemmatize == true) {
+				now = lemmatize(text).split(" ");
 			}
-			// annotate Pred/Arg/""
-			NodeList annotations = doc.getElementsByTagName("Markables").item(0).getChildNodes();
-			for (int i=1; i<annotations.getLength(); i=i+2) {
-				// if not nodes with TAG_DESCRIPTOR
-				Node node = annotations.item(i);
-				if (node.getChildNodes().getLength() > 1) {
-					String name = node.getNodeName();
-					if (name.contains("ACTION") || name.contains("NEG")) {
-						// anchor = t_id of annotated token
-						String anchor = node.getChildNodes().item(1).getAttributes().item(0).getTextContent();
-						fileTokens.get(anchor)[1] = "pred";
-					} else {
-						NodeList anchors = node.getChildNodes();
-						for (int j=1; j<anchors.getLength(); j=j+2) {
-							String anchor = anchors.item(j).getAttributes().item(0).getTextContent();
-							fileTokens.get(anchor)[1] = "arg";
+			
+			// deal with inconsistency caused by lemmatizer. ecb.xml excluded
+		    int j=0;
+		    for (int i=0; i<old.length; i++) {
+		    	String s = old[i];
+		    	if (s.startsWith("\"")) {
+		    		if (s.length()==1) {
+		    			res[i] = old[i];
+		    			j+=1;
+		    		} else {
+		    			if (s.endsWith("'s") || s.endsWith("'d") || s.endsWith("'m") || s.endsWith("s'")) {
+		    				res[i] = old[i];
+		    				j+=3;
+		    			} else {
+		    				res[i] = old[i];
+		    				j+=2;
+		    			}
+		    		}
+		    	} else if (s.endsWith("'s") || s.endsWith("'d") || s.endsWith("'m") || s.endsWith("s'")) {
+		    		res[i] = old[i];
+		    		j+=2;
+		    	} else if (now[j].equals("...")) {
+		    		res[i] = ".";
+		    		res[i+1] = ".";
+		    		res[i+2] = ".";
+		    		i+=2;
+		    		j+=1;
+		    	} else {
+		    		res[i] = now[j];
+		    		j+=1;
+		    	}
+		    }
+		    
+		    // set mentions in _annotation to lemmatized tokens
+		    for (MentionSpan ms : _annotation.values()) {
+		    	if (ms.getId().contains(docName)) {
+		    		String[] ids = ms.getId().split(" ");
+		    		String newContent = "";
+		    		for (String id : ids) {
+		    			if(id.substring(id.indexOf("/")+1, id.length()-1)==""){
+		    				System.out.println("empty id");
+		    				System.exit(0);
+		    			}
+		    			newContent += res[Integer.parseInt(id.substring(id.indexOf("/")+1, id.length()))-1];
+		    		}
+		    		ms.setContent(newContent);
+		    	}
+		    }
+		}
+		
+		//TODO: alignment!
+		// align if content overlaps
+		System.out.println(_annotation.size() + "  anno size !! ");
+		for (MentionSpan mention : _annotation.values()) {
+			if (mention.getId().contains("_1ecb")) {
+				for (MentionSpan ms : _annotation.values()) {
+					if (!ms.getId().contains("_1ecb")) {
+						//System.out.println("avant la comparision");
+						if (mention.equals(ms)) {
+							_H.add(mention.getMId() + " -> " + ms.getMId());
 						}
 					}
-				}
-				//System.out.println(annotations.item(i).getNodeName());
-			}
-			_cluster.put(file.getName(), fileTokens);
-			
-			// get coref
-			NodeList CDCs = doc.getElementsByTagName("CROSS_DOC_COREF");
-			for (int i=0; i<CDCs.getLength(); i++) {
-				HashSet<String[]> instances = new HashSet<String[]>();
-				NodeList refs = CDCs.item(i).getChildNodes();
-				for (int j=1; j<refs.getLength(); j=j+2) {
-					// ref = source/target
-					Node ref = refs.item(j);
-					String m_id = ref.getAttributes().item(0).getNodeValue();
-					if (ref.getNodeName().equals("source")) {
-						NodeList elements = doc.getElementsByTagName("Markables").item(0).getChildNodes();
-						for (int k=1; k<elements.getLength(); k=k+2) {
-							Element element = (Element) elements.item(k);
-							if (element.getAttribute("m_id").equals(m_id)) {
-								// find token anchor(s)
-								String phrase = "", id = "";
-								for (int l=1; l<element.getChildNodes().getLength(); l=l+2) {
-									Element anchor = (Element) element.getChildNodes().item(l);
-									String t_id = anchor.getAttribute("t_id");
-									phrase += (_cluster.get(file.getName()).get(t_id)[0] + " ");
-									id += (file.getName() + "/" + t_id + " ");
-								}
-								phrase.trim();
-								id.trim();
-								String[] temp = {phrase, id};
-								instances.add(temp);
-							}
-						}
-					} /*else {
-						// find tag_descriptor
-						NodeList elements = doc.getElementsByTagName("Markables").item(0).getChildNodes();
-						for (int k=1; k<elements.getLength(); k=k+2) {
-							Element element = (Element) elements.item(k);
-							//System.out.print(element.getAttribute("m_id") + " " + m_id + " ");
-							if (element.getAttribute("m_id").equals(m_id)) {
-								_coref.put(element.getAttribute("TAG_DESCRIPTOR"), tags);
-							}
-						}
-						//System.out.println();
-					}*/
-				}
-				String note = CDCs.item(i).getAttributes().item(0).getNodeValue();
-				if (_coref.containsKey(note)) {
-					HashSet<String[]> temp = _coref.get(note);
-					temp.addAll(instances);
-					_coref.put(note, temp);
-				} else {
-					_coref.put(note, instances);
 				}
 			}
 		}
 	}
 	
+
 	public static void eval() {
-		   // "file/t_id -> file/t_id"
-		for (HashSet<String[]> hs : _coref.values()) {   // [token, doc]
-			for (String[] mention : hs) {
-				if (mention[1].contains("_1ecb.xml") || mention[1].contains("_1ecbplus.xml")) {
-					for (String[] m : hs) {
-						if (!m[1].contains("_1ecb.xml") && !m[1].contains("_1ecbplus.xml")) {
-							_G.add(mention[1] + "-> " + m[1].trim());
+		// ground truth -- [doc/m_id -> doc/m_id]
+		for (HashMap<String, MentionSpan> mentions : _coref.values()) {   // [token, doc]
+			for (String m_id : mentions.keySet()) {
+				if (m_id.contains("_1ecb")) {
+					for (String m_id2 : mentions.keySet()) {
+						if (!m_id2.contains("_1ecb")) {
+							_G.add(m_id + " -> " + m_id2);
 						}
 					}
 				}
 			}
 		}
-		for (String docName : _cluster.keySet()) {
-			String text = "";
-			HashMap<String, String[]> doc = _cluster.get(docName);
-			for (int i=1; i<=doc.keySet().size(); i++) {
-				text += (doc.get(Integer.toString(i))[0] + " ");
-			}
-			//text = lemmatize(text);
-			String[] lemmatizedText = text.split(" ");
-			int j= 0;  // . . . lemmatized as ... shrinking the size of returned list
-			for (int i=1; i<=doc.keySet().size(); i++) {
-				doc.get(Integer.toString(i))[0] = lemmatizedText[j];
-				j += 1;
-				if (lemmatizedText[j-1].equals("...")) {
-					i += 2;
-				}
-			}
-		}
-		// _cluster already lemmatized
-		// TODO: for annotated words, find x_1...xml -> x_y...xml
-		for (String docName : _cluster.keySet()) {
-			if (docName.contains("_1ecb")) {
-				//System.out.println(docName);
-				for (String t_id : _cluster.get(docName).keySet()) {
-					String[] wordfeature = _cluster.get(docName).get(t_id);
-					if (!wordfeature[1].equals("")) {
-						//System.out.println(wordfeature[0] + "  is annotated");
-						for (String dn : _cluster.keySet()) {
-							if (!dn.contains("_1ecb")) {
-								for (String id : _cluster.get(dn).keySet()) {
-									String[] wf = _cluster.get(dn).get(id);
-									if (!wf[1].equals("") && wf[0].equals(wordfeature[0])) {
-										//System.out.println(wf[0] + "  matched");
-										_H.add(docName + "/" + t_id + " -> " + dn + "/" + id);
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
+		
 		int intersection = Sets.intersection(_G, _H).size();
 		System.out.println(intersection);
 		double precision = (double) intersection / _H.size();
 		double recall = (double) intersection / _G.size();
 		double F1 = 2*precision*recall / (precision+recall);
 		System.out.format("precision: %f   recall: %f   F1: %f%n", precision, recall, F1);
+	}
+	
+
+	// analyse results for "host"
+	private static void analyzeResults(String output) throws FileNotFoundException {
+		PrintWriter writer = new PrintWriter(output);
+		writer.println("overlap:");
+		for (String g : _G) {
+			if (g.contains("2_1ecbplus.xml/36") && _H.contains(g)) {
+				writer.println(g);
+			}
+		}
+		writer.println("overlap:");
+		writer.println("ground truth:");
+		for (String g : _G) {
+			if (g.contains("2_1ecbplus.xml/36")) {
+				writer.println(g);
+			}
+		}
+		writer.println("overlap:");
+		writer.println("identified:");
+		for (String h : _H) {
+			if (h.contains("2_1ecbplus.xml/36")) {
+				writer.println(h);
+			}
+		}
+		writer.close();
+	}
+	
+	private static void writeGH(String GFile, String HFile) throws FileNotFoundException {
+		PrintWriter writerG = new PrintWriter(GFile);
+		PrintWriter writerH = new PrintWriter(HFile);
+		for (String g : _G) {
+			writerG.print(g);
+			writerG.println("  " + _annotation.get(g.split(" ")[0]).getContent() + " -> " 
+			+ _annotation.get(g.split(" ")[2]).getContent());
+		}
+		for (String h : _H) {
+			writerH.println(h);
+			writerH.println("  " + _annotation.get(h.split(" ")[0]).getContent() + " -> " 
+					+ _annotation.get(h.split(" ")[2]).getContent());
+		}
+		writerG.close();
+		writerH.close();
+	}
+	
+	private static void writeLinkedPercentage(String output) throws ParserConfigurationException, 
+	SAXException, IOException {
+		PrintWriter writer = new PrintWriter(output);
+		int clusterNum = 1;
+		while (clusterNum <=45) {
+			int annotatedT = 0, totalT = 0;
+			int alignedM = 0, totalM = 0;
+			
+			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/" + clusterNum);
+
+			for (String text : _cluster.values()) {
+				totalT += text.split(" ").length;
+			}
+			for (MentionSpan ms : _annotation.values()) {
+				if (ms.getId().contains(clusterNum + "_")) {
+					totalM += 1;
+					annotatedT += ms.getId().split(" ").length;
+				}
+			}
+			HashSet<String> temp = new HashSet<String>();
+			for (HashMap<String, MentionSpan> alignment : _coref.values()) {
+				for (String m_id : alignment.keySet()) {
+					if (m_id.contains(clusterNum + "_")) {
+						temp.add(m_id);
+					}
+				}
+			}
+			alignedM = temp.size();
+			
+			writer.format("cluster %2d: %-5d annotated      %-5d tokens       %f%n", clusterNum, annotatedT, totalT,
+					(double) annotatedT/totalT);
+			writer.format("            %-5d aligned        %-5d mentions     %f%n%n", alignedM, totalM, 
+					(double) alignedM/totalM);
+			
+			_cluster.clear();
+			_annotation.clear();
+			_coref.clear();
+			
+			clusterNum += 1;
+			if (clusterNum == 15 || clusterNum == 17) {
+				clusterNum += 1;
+			}
+		}
+		writer.close();
 	}
 }

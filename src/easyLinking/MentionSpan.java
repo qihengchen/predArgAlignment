@@ -5,13 +5,14 @@ import java.util.HashSet;
 
 import com.google.common.collect.Sets;
 
-public class MentionSpan {
+public class MentionSpan extends Span{
 	
 	private String _content;
 	private final String _id, _attr, _m_id;
 	
 	public MentionSpan(String content, String id, String m_id, String attribute) {
-		_content = content;
+		super(content);
+		// _content = content;
 		_id = id;  // "doc/t_id doc/t_id ..."    final
 		_m_id = m_id;  // doc/m_id               final
 		_attr = attribute; // P/A/""             final

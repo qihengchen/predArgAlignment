@@ -1,7 +1,10 @@
 package easyLinking;
-//TODO: investigate why recall is low
+
+//TODO: build in-document reference chain
+//TODO: try on old ecb.xml data
 //TODO: compute F-score for P, A, and overall.
-//TODO: find least common words
+//TODO: find least common words, remove trivial links, aka linked because of ./the/a...
+//TODO: unanchored entity disambiguation
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -43,8 +46,6 @@ public class Linking {
 			new HashMap<String, HashMap<String, MentionSpan>>();
 	private static HashMap<String, MentionSpan> _annotation = new HashMap<String, MentionSpan>();
 	private static HashMap<String, String> _cluster = new HashMap<String, String>();
-	private static HashMap<String, MentionSpan> _alignedMentions = new HashMap<String, MentionSpan>();
-	
 	private static StanfordCoreNLP _pipeline;
 	private static HashSet<String> _G = new HashSet<String>();
 	private static HashSet<String> _H = new HashSet<String>();
@@ -52,23 +53,24 @@ public class Linking {
 	
 	public static void main(String[] args) throws Exception {
 		_doLemmatize = true;
-		
+		readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/" + 1);
+		LocalChain lc = new LocalChain(_cluster.get("1_2ecbplus.xml"));
 		//writeLinkedPercentage("/Users/Qiheng/Desktop/Summer 2015/linkedPercentage2.txt");
-		
+		/*
 		int i = 1;
 		while (i==1) {
 			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/" + i);
 			linkMentions();
 			eval();
-			writeGH("/Users/Qiheng/Desktop/Summer 2015/experiment/GL.txt", 
-					"/Users/Qiheng/Desktop/Summer 2015/experiment/HL.txt");
+			writeGH("/Users/Qiheng/Desktop/Summer 2015/experiment/GL1P.txt", 
+					"/Users/Qiheng/Desktop/Summer 2015/experiment/HL1P.txt");
 			//analyzeResults("/Users/Qiheng/Desktop/Summer 2015/experiment/analysis2.txt");
 			_G.clear();
 			_H.clear();
 			_coref.clear();
 			_cluster.clear();
 			i++;
-		}
+		}*/
 	}
 	
 
@@ -240,13 +242,9 @@ public class Linking {
 		    		String[] ids = ms.getId().split(" ");
 		    		String newContent = "";
 		    		for (String id : ids) {
-		    			if(id.substring(id.indexOf("/")+1, id.length()-1)==""){
-		    				System.out.println("empty id");
-		    				System.exit(0);
-		    			}
-		    			newContent += res[Integer.parseInt(id.substring(id.indexOf("/")+1, id.length()))-1];
+		    			newContent += (res[Integer.parseInt(id.substring(id.indexOf("/")+1, id.length()))-1] + " ");
 		    		}
-		    		ms.setContent(newContent);
+		    		ms.setContent(newContent.trim());
 		    	}
 		    }
 		}
@@ -255,10 +253,9 @@ public class Linking {
 		// align if content overlaps
 		System.out.println(_annotation.size() + "  anno size !! ");
 		for (MentionSpan mention : _annotation.values()) {
-			if (mention.getId().contains("_1ecb")) {
+			if (mention.getId().contains("_1ecb") && mention.getAttribute().equals("pred")) {
 				for (MentionSpan ms : _annotation.values()) {
-					if (!ms.getId().contains("_1ecb")) {
-						//System.out.println("avant la comparision");
+					if (!ms.getId().contains("_1ecb") && mention.getAttribute().equals(ms.getAttribute())) {
 						if (mention.equals(ms)) {
 							_H.add(mention.getMId() + " -> " + ms.getMId());
 						}
@@ -273,9 +270,9 @@ public class Linking {
 		// ground truth -- [doc/m_id -> doc/m_id]
 		for (HashMap<String, MentionSpan> mentions : _coref.values()) {   // [token, doc]
 			for (String m_id : mentions.keySet()) {
-				if (m_id.contains("_1ecb")) {
+				if (m_id.contains("_1ecb") && mentions.get(m_id).getAttribute().equals("pred")) {
 					for (String m_id2 : mentions.keySet()) {
-						if (!m_id2.contains("_1ecb")) {
+						if (!m_id2.contains("_1ecb") && mentions.get(m_id2).getAttribute().equals("pred")) {
 							_G.add(m_id + " -> " + m_id2);
 						}
 					}
@@ -327,7 +324,7 @@ public class Linking {
 			+ _annotation.get(g.split(" ")[2]).getContent());
 		}
 		for (String h : _H) {
-			writerH.println(h);
+			writerH.print(h);
 			writerH.println("  " + _annotation.get(h.split(" ")[0]).getContent() + " -> " 
 					+ _annotation.get(h.split(" ")[2]).getContent());
 		}
@@ -379,5 +376,16 @@ public class Linking {
 			}
 		}
 		writer.close();
+	}
+	
+	public static StanfordCoreNLP getPipeline() {
+		if (_pipeline == null) {
+			init();
+		}
+		return _pipeline;
+	}
+	
+	public static HashMap<String, MentionSpan> getAnnotation() {
+		return _annotation;
 	}
 }

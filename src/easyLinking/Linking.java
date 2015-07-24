@@ -1,16 +1,17 @@
 package easyLinking;
 
-//TODO: build in-document reference chain
+//TODO: test readCorpus method
 //TODO: try on old ecb.xml data
-//TODO: compute F-score for P, A, and overall.
 //TODO: find least common words, remove trivial links, aka linked because of ./the/a...
-//TODO: unanchored entity disambiguation
+//TODO: unanchored entity disambiguation??
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +22,7 @@ import java.util.regex.Matcher;
 
 import edu.stanford.nlp.ling.CoreAnnotations.LemmaAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.SentencesAnnotation;
+import edu.stanford.nlp.ling.CoreAnnotations.TextAnnotation;
 import edu.stanford.nlp.ling.CoreAnnotations.TokensAnnotation;
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.pipeline.Annotation;
@@ -37,7 +39,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Element;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
 public class Linking {
 	
@@ -45,32 +49,36 @@ public class Linking {
 	private static HashMap<String, HashMap<String, MentionSpan>> _coref = 
 			new HashMap<String, HashMap<String, MentionSpan>>();
 	private static HashMap<String, MentionSpan> _annotation = new HashMap<String, MentionSpan>();
-	private static HashMap<String, String> _cluster = new HashMap<String, String>();
+	// {doc:[[text, m_id/""]...]}
+	private static HashMap<String, ArrayList<String[]>> _cluster = new HashMap<String, ArrayList<String[]>>();
 	private static StanfordCoreNLP _pipeline;
 	private static HashSet<String> _G = new HashSet<String>();
 	private static HashSet<String> _H = new HashSet<String>();
-	private static boolean _doLemmatize = false;
+	private static boolean _doLemmatize = false, _hasChain = false;
 	
 	public static void main(String[] args) throws Exception {
 		_doLemmatize = true;
-		readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/" + 1);
-		LocalChain lc = new LocalChain(_cluster.get("1_2ecbplus.xml"));
+		
+		//readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ToyCorpus/");
+		//LocalChain lc = new LocalChain(_cluster.get("1_1ecbplus.xml"));
+		//LocalChain lc = new LocalChain("He likes the dog . He is Sam . He roams on the streets where nobody stands .");
 		//writeLinkedPercentage("/Users/Qiheng/Desktop/Summer 2015/linkedPercentage2.txt");
-		/*
+		
+		
 		int i = 1;
 		while (i==1) {
 			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/" + i);
 			linkMentions();
 			eval();
-			writeGH("/Users/Qiheng/Desktop/Summer 2015/experiment/GL1P.txt", 
-					"/Users/Qiheng/Desktop/Summer 2015/experiment/HL1P.txt");
+			writeGH("/Users/Qiheng/Desktop/Summer 2015/experiment/G1-noChain.txt", 
+					"/Users/Qiheng/Desktop/Summer 2015/experiment/H1-noChain.txt");
 			//analyzeResults("/Users/Qiheng/Desktop/Summer 2015/experiment/analysis2.txt");
 			_G.clear();
 			_H.clear();
 			_coref.clear();
 			_cluster.clear();
 			i++;
-		}*/
+		}
 	}
 	
 
@@ -78,7 +86,7 @@ public class Linking {
 	public static void readCorpus(String dirPath) throws ParserConfigurationException, SAXException, IOException {
 		File folder = new File(dirPath + "/");
 		for (File file : folder.listFiles()) {
-			
+			System.out.println(file.getName());
 			//TODO: get it work on ecb.xml data
 			if (file.getName().endsWith("ecb.xml")) {
 				continue;
@@ -93,10 +101,11 @@ public class Linking {
 			for (int i=0; i<tokenList.getLength(); i++) {
 				Element token = (Element) tokenList.item(i);
 				text += (token.getTextContent() + " ");
-				//String[] temp = {token.getTextContent(), ""};
-				//fileTokens.put(token.getAttribute("t_id"), temp);
 			}
-			_cluster.put(file.getName(), text.trim());
+			String[] textArray = text.trim().split(" ");
+			
+			// 
+			ArrayList<String[]> tempIds = new ArrayList<String[]>();
 			
 			// find all annotations -- "pred" or "arg"
 			NodeList annotations = doc.getElementsByTagName("Markables").item(0).getChildNodes();
@@ -104,23 +113,67 @@ public class Linking {
 				// if nodes without TAG_DESCRIPTOR
 				Node node = annotations.item(i);
 				if (node.getChildNodes().getLength() > 1) {
-					String content = "";
+					// String content = "";
 					String id = "";
 					String m_id = file.getName() + "/" + node.getAttributes().item(0).getTextContent();
 					NodeList anchors = node.getChildNodes();
 					for (int j=1; j<anchors.getLength(); j=j+2) {
 						Integer t_id = Integer.parseInt(anchors.item(j).getAttributes().item(0).getTextContent());
-						content += (_cluster.get(file.getName()).split(" ")[t_id-1] + " ");
-						id += (file.getName() + "/" + t_id + " ");
+						// content += (textArray[t_id-1] + " ");
+						id += (t_id + " ");
+						// id += (file.getName() + "/" + t_id + " ");
 					}
 					if (node.getNodeName().contains("ACTION") || node.getNodeName().contains("NEG")) {
 						//String anchor = node.getChildNodes().item(1).getAttributes().item(0).getTextContent();
-						_annotation.put(m_id, new MentionSpan(content, id, m_id, "pred"));
+						_annotation.put(m_id, new MentionSpan(m_id, "pred"));
+						tempIds.add(new String[] {id.trim(), m_id});
+						//System.out.format("check tempIds addition -- id: %s  m_id: %s%n", id.trim(), m_id);
 					} else {
-						_annotation.put(m_id, new MentionSpan(content, id, m_id, "arg"));
+						_annotation.put(m_id, new MentionSpan(m_id, "arg"));
+						tempIds.add(new String[] {id.trim(), m_id});
 					}
 				}
 			}
+			
+			Collections.sort(tempIds, new IdComparator());
+			
+			// List[[segment of tokens, m_id/""]...]
+			ArrayList<String[]> temp = new ArrayList<String[]>();
+			int m=0;
+			for (String[] tempId : tempIds) {
+				int min = Integer.parseInt(tempId[0].split(" ")[0]), 
+					max = Integer.parseInt(tempId[0].split(" ")[tempId[0].split(" ").length-1]);
+				if (min-1-m > 0) {
+					temp.add(new String[] {Joiner.on(" ").join(Arrays.copyOfRange(textArray,m,min-1)), ""});
+				}
+				temp.add(new String[] {Joiner.on(" ").join(Arrays.copyOfRange(textArray,min-1,max)), tempId[1]});
+				m = max;
+			}
+			if (m<textArray.length) {
+				temp.add(new String[] {Joiner.on(" ").join(Arrays.copyOfRange(textArray,m,textArray.length)), ""});
+			}
+			/*
+			for (String[] s : temp) {
+				System.out.println(s[0]);
+				System.out.println(s[1]);
+				System.out.println("------------------");
+			}*/
+			
+			// tokenize, update mentionSpan
+			for (String[] segment : temp) {
+				segment[0] = tokenize(segment[0]);
+				if (!segment[1].equals("")) {
+					_annotation.get(segment[1]).setContent(segment[0]);
+				}
+			}
+			
+			/*for (MentionSpan ms : _annotation.values()) {
+				if (ms.getAttribute().equals("pred")) {
+					System.out.format("pred -- %s   id:  %s%n", ms.getContent(), ms.getMId());
+				}
+			}*/
+			
+			_cluster.put(file.getName(), temp);
 			
 			// get cross_doc_coref
 			NodeList CDCs = doc.getElementsByTagName("CROSS_DOC_COREF");
@@ -142,6 +195,23 @@ public class Linking {
 				}
 			}
 		}
+	}
+	
+	private static String tokenize(String text) {
+		if (_pipeline == null) {
+			init();
+		}
+		Annotation document = new Annotation(text);
+	    _pipeline.annotate(document);
+	    List<CoreMap> sentences = document.get(SentencesAnnotation.class);
+	    String res = "";
+	    for(CoreMap sentence: sentences) {
+	        for (CoreLabel token: sentence.get(TokensAnnotation.class)) {
+	            String word = token.get(TextAnnotation.class);
+	            res += (word + " ");
+	        }
+	    }
+	    return res.trim();
 	}
 	
 
@@ -192,72 +262,69 @@ public class Linking {
 	
 	
 	private static void linkMentions() {
+		HashMap<String, LocalChain> chains = new HashMap<String, LocalChain>();
 		for (String docName : _cluster.keySet()) {
 			System.out.println(docName);
-			String text = _cluster.get(docName);
 			
-			String[] old = text.split(" ");           // tokens
-			String[] res = new String[old.length];    // results
-			String[] now = text.split(" ");           // lemmatized tokens
-			
-			if (_doLemmatize == true) {
-				now = lemmatize(text).split(" ");
+			String text = "";
+			for (String[] s : _cluster.get(docName)) {
+				text += (s[0] + " ");
 			}
+			text = text.trim();
 			
-			// deal with inconsistency caused by lemmatizer. ecb.xml excluded
-		    int j=0;
-		    for (int i=0; i<old.length; i++) {
-		    	String s = old[i];
-		    	if (s.startsWith("\"")) {
-		    		if (s.length()==1) {
-		    			res[i] = old[i];
-		    			j+=1;
-		    		} else {
-		    			if (s.endsWith("'s") || s.endsWith("'d") || s.endsWith("'m") || s.endsWith("s'")) {
-		    				res[i] = old[i];
-		    				j+=3;
-		    			} else {
-		    				res[i] = old[i];
-		    				j+=2;
-		    			}
-		    		}
-		    	} else if (s.endsWith("'s") || s.endsWith("'d") || s.endsWith("'m") || s.endsWith("s'")) {
-		    		res[i] = old[i];
-		    		j+=2;
-		    	} else if (now[j].equals("...")) {
-		    		res[i] = ".";
-		    		res[i+1] = ".";
-		    		res[i+2] = ".";
-		    		i+=2;
-		    		j+=1;
-		    	} else {
-		    		res[i] = now[j];
-		    		j+=1;
+			
+			String[] lemmas = lemmatize(text).split(" ");
+			if (text.split(" ").length != lemmas.length) {
+				System.err.format("before: %d   after: %d%n", text.split(" ").length, lemmas.length);
+				System.exit(0);
+			}
+		    // set mention content to lemmatized tokens, _cluster unchanged
+			int index = 0;
+		    for (String[] segment : _cluster.get(docName)) {
+		    	if (!segment[1].equals("")) {
+		    		_annotation.get(segment[1]).setContent(Joiner.on(" ").
+		    				join(Arrays.copyOfRange(lemmas,index,index+segment[0].split(" ").length)));
 		    	}
+		    	index += segment[0].split(" ").length;
 		    }
 		    
-		    // set mentions in _annotation to lemmatized tokens
-		    for (MentionSpan ms : _annotation.values()) {
-		    	if (ms.getId().contains(docName)) {
-		    		String[] ids = ms.getId().split(" ");
-		    		String newContent = "";
-		    		for (String id : ids) {
-		    			newContent += (res[Integer.parseInt(id.substring(id.indexOf("/")+1, id.length()))-1] + " ");
-		    		}
-		    		ms.setContent(newContent.trim());
-		    	}
+		    
+		    if (_hasChain) {
+		    	chains.put(docName, new LocalChain(_cluster.get(docName)));
 		    }
+		 	
+		    
 		}
 		
-		//TODO: alignment!
-		// align if content overlaps
-		System.out.println(_annotation.size() + "  anno size !! ");
+		//TODO: align
+		// align if content overlaps or in the same local chain
+		System.out.println(_annotation.size() + "  annotation size !! ");
 		for (MentionSpan mention : _annotation.values()) {
-			if (mention.getId().contains("_1ecb") && mention.getAttribute().equals("pred")) {
+			if (mention.getMId().contains("_1ecb")) { // && mention.getAttribute().equals("pred")) {
+				
 				for (MentionSpan ms : _annotation.values()) {
-					if (!ms.getId().contains("_1ecb") && mention.getAttribute().equals(ms.getAttribute())) {
+					if (!ms.getMId().contains("_1ecb") && mention.getAttribute().equals(ms.getAttribute())) {
+						// align if content overlaps
 						if (mention.equals(ms)) {
 							_H.add(mention.getMId() + " -> " + ms.getMId());
+							
+							if (_hasChain) {
+								// align if in the same local chain
+								String docName  = ms.getMId().substring(0, ms.getMId().indexOf("/"));
+								System.out.println(docName);
+								String reprm = chains.get(docName).isChained(ms.getMId());
+								System.out.println(reprm);
+								
+								if (!reprm.equals("")) {
+									System.out.println("reprm is annotated");
+									for (String chainedMId : chains.get(docName).getLocalChain(reprm)) {
+										_H.add(mention.getMId() + " -> " + chainedMId);
+									}
+								} else {
+									System.out.println();
+								}
+								System.out.println("----------");
+							}
 						}
 					}
 				}
@@ -270,9 +337,10 @@ public class Linking {
 		// ground truth -- [doc/m_id -> doc/m_id]
 		for (HashMap<String, MentionSpan> mentions : _coref.values()) {   // [token, doc]
 			for (String m_id : mentions.keySet()) {
-				if (m_id.contains("_1ecb") && mentions.get(m_id).getAttribute().equals("pred")) {
+				
+				if (m_id.contains("_1ecb")) { // && mentions.get(m_id).getAttribute().equals("pred")) {
 					for (String m_id2 : mentions.keySet()) {
-						if (!m_id2.contains("_1ecb") && mentions.get(m_id2).getAttribute().equals("pred")) {
+						if (!m_id2.contains("_1ecb")){ // && mentions.get(m_id2).getAttribute().equals("pred")) {
 							_G.add(m_id + " -> " + m_id2);
 						}
 					}
@@ -341,14 +409,19 @@ public class Linking {
 			int alignedM = 0, totalM = 0;
 			
 			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/" + clusterNum);
-
-			for (String text : _cluster.values()) {
+			
+			for (ArrayList<String[]> doc : _cluster.values()) {
+				String text = "";
+				for (String[] s : doc) {
+					text += (s[0] + " ");
+				}
+				text = text.trim();
 				totalT += text.split(" ").length;
 			}
 			for (MentionSpan ms : _annotation.values()) {
-				if (ms.getId().contains(clusterNum + "_")) {
+				if (ms.getMId().contains(clusterNum + "_")) {
 					totalM += 1;
-					annotatedT += ms.getId().split(" ").length;
+					annotatedT += ms.getMId().split(" ").length;
 				}
 			}
 			HashSet<String> temp = new HashSet<String>();

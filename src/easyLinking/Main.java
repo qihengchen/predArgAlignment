@@ -42,6 +42,12 @@ import edu.stanford.nlp.util.IntPair;
 public class Main {
 	
 	public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException {
+		for (String s : "//2".split("/")) {
+			System.out.println(s);
+		}
+		
+		
+		/*
 	    Properties props = new Properties();
 	    props.setProperty("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
 	    StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
@@ -52,6 +58,7 @@ public class Main {
 	    List<CoreMap> sentences = document.get(SentencesAnnotation.class);
 	    
 	    for(CoreMap sentence: sentences) {
+	    	
 	        for (CoreLabel token: sentence.get(TokensAnnotation.class)) {
 	            String word = token.get(TextAnnotation.class);
 	            System.out.println(word);
@@ -61,7 +68,6 @@ public class Main {
 	    }
 	    
 	    
-	    /*
 	    Map<Integer, CorefChain> graph = document.get(CorefChainAnnotation.class);
 	    System.out.println(graph.entrySet().size() + "  is the size");
 	    for(Map.Entry<Integer, CorefChain> entry : graph.entrySet()) {

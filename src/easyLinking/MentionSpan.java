@@ -5,17 +5,24 @@ import java.util.HashSet;
 
 import com.google.common.collect.Sets;
 
-public class MentionSpan extends Span{
+public class MentionSpan {
 	
 	private String _content;
-	private final String _id, _attr, _m_id;
+	private final String _attr, _m_id;
+	private String _t_id;
 	
-	public MentionSpan(String content, String id, String m_id, String attribute) {
-		super(content);
+	public MentionSpan(String m_id, String attribute) {
 		// _content = content;
-		_id = id;  // "doc/t_id doc/t_id ..."    final
+		//_id = id;  // "doc/t_id doc/t_id ..."    final
 		_m_id = m_id;  // doc/m_id               final
 		_attr = attribute; // P/A/""             final
+	}
+	
+	public MentionSpan(String m_id, String t_id, String content, String attribute) {
+		_m_id = m_id;  // doc/m_id               final
+		_attr = attribute;// P/A/""              final
+		_t_id = t_id;
+		_content = content;
 	}
 	
 	@Override
@@ -41,8 +48,12 @@ public class MentionSpan extends Span{
 		_content = content;
 	}
 	
-	public String getId() {
-		return _id;
+	public void setTId(String id) {
+		_t_id = id;
+	}
+	
+	public String getTId() {
+		return _t_id;
 	}
 	
 	public String getMId() {

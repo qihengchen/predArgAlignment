@@ -19,10 +19,14 @@ public class IdComparator implements Comparator<String[]> {
 		} else if (o1min >= o2max) {
 			return 1;
 		} else {
-			System.out.println(o1min + " " + o1max + " " + o2min + " " + o2max);
+			System.out.print(o1min + " " + o1max + " " + o2min + " " + o2max);
 			System.err.println("ERROR: id range should not overlap");
-			System.exit(0);
-			return 0;
+			//System.exit(0);
+			if ((o1max-o1min) >= (o2max-o2min)) {
+				return 1;
+			} else {
+				return -1;
+			}
 		}
 	}
 

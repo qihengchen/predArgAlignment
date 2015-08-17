@@ -17,5 +17,7 @@
 	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/xom-1.2.10-src.jar"/>
 	<classpathentry kind="lib" path="/Users/Qiheng/Desktop/Summer 2015/stanford-corenlp/xom.jar"/>
 	<classpathentry kind="lib" path="/Users/Qiheng/Downloads/guava-18.0.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Downloads/Jama-1.0.2.jar"/>
+	<classpathentry kind="lib" path="/Users/Qiheng/Downloads/edu.mit.jwi_2.3.3_all/edu.mit.jwi_2.3.3_jdk.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

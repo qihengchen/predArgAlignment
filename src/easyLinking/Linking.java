@@ -1,9 +1,6 @@
 package easyLinking;
 
-//TODO: test readCorpus method
-//TODO: try on old ecb.xml data
 //TODO: find least common words, remove trivial links, aka linked because of ./the/a...
-//TODO: unanchored entity disambiguation??
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -41,7 +38,6 @@ import org.w3c.dom.Element;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
 public class Linking {
 	
@@ -54,17 +50,16 @@ public class Linking {
 	private static StanfordCoreNLP _pipeline;
 	private static HashSet<String> _G = new HashSet<String>();
 	private static HashSet<String> _H = new HashSet<String>();
-	private static boolean _doLemmatize = false, _hasChain = false;
+	private static boolean _hasChain = false;
 	
 	public static void main(String[] args) throws Exception {
-		_doLemmatize = true;
 		
 		//readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ToyCorpus/");
 		//LocalChain lc = new LocalChain(_cluster.get("1_1ecbplus.xml"));
 		//LocalChain lc = new LocalChain("He likes the dog . He is Sam . He roams on the streets where nobody stands .");
 		//writeLinkedPercentage("/Users/Qiheng/Desktop/Summer 2015/linkedPercentage2.txt");
-		
-		
+		/*
+		init();
 		int i = 1;
 		while (i==1) {
 			readCorpus("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/" + i);
@@ -78,7 +73,8 @@ public class Linking {
 			_coref.clear();
 			_cluster.clear();
 			i++;
-		}
+		}*/
+		System.out.println(tokenize("I'm *UNK* when he's . . ."));
 	}
 	
 

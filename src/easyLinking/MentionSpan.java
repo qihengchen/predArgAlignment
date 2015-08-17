@@ -7,7 +7,7 @@ import com.google.common.collect.Sets;
 
 public class MentionSpan {
 	
-	private String _content;
+	private String _content, _lemma;
 	private final String _attr, _m_id;
 	private String _t_id;
 	
@@ -16,6 +16,12 @@ public class MentionSpan {
 		//_id = id;  // "doc/t_id doc/t_id ..."    final
 		_m_id = m_id;  // doc/m_id               final
 		_attr = attribute; // P/A/""             final
+	}
+	
+	public MentionSpan(String m_id, String t_id, String attribute) {
+		_m_id = m_id;  // doc/m_id               final
+		_attr = attribute;// P/A/""              final
+		_t_id = t_id;
 	}
 	
 	public MentionSpan(String m_id, String t_id, String content, String attribute) {
@@ -35,8 +41,8 @@ public class MentionSpan {
 			return true;
 		}
 		MentionSpan ms = (MentionSpan) obj;
-		HashSet<String> thisSet = new HashSet<String>(Arrays.asList(_content.split(" ")));
-		HashSet<String> objSet = new HashSet<String>(Arrays.asList(ms.getContent().split(" ")));
+		HashSet<String> thisSet = new HashSet<String>(Arrays.asList(_lemma.split(" ")));
+		HashSet<String> objSet = new HashSet<String>(Arrays.asList(ms.getLemma().split(" ")));
 		return Sets.intersection(thisSet, objSet).size() >= 1;
 	}
 	
@@ -62,5 +68,22 @@ public class MentionSpan {
 	
 	public String getAttribute() {
 		return _attr;
+	}
+	
+	public void setLemma(String lemma) {
+		_lemma = lemma;
+	}
+	
+	public String getLemma() {
+		return _lemma;
+	}
+	
+	public boolean containsID(String that) {
+		for (String id : _t_id.split(" ")) {
+			if (id.equals(that)) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

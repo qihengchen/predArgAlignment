@@ -1,8 +1,10 @@
 package util;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -11,6 +13,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Scanner;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -59,20 +62,253 @@ public class cleanseData {
 	private static HashSet<String> _errors = new HashSet<String>();
 	
 	public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException {
-		//init();
-		//lemmatize("This is an ellipsis .");
+		//manuallyClean();
+		String s = "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/2_10ecbplus.xml";
+		readCorpus(new File(s));
+		rewriteCorpus(s, "2_10ecbplus.xml");
+		addMId(s, s, "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/2/2_10ecbplus.xml");
+		
+		/*
+		String path = "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/MyCorpus/";
+		File folder = new File(path);
+		
+		FilenameFilter filter = new FilenameFilter() {
+			@Override
+			public boolean accept(File dir, String name) {return !name.equals(".DS_Store");}
+		};
+
+		for (File cluster : folder.listFiles(filter)) {
+			System.out.println(cluster.getName());
+			if (cluster.isDirectory() && !cluster.getName().equals("tempFolder")) {
+				for (File subCluster : cluster.listFiles(filter)) {
+					System.out.println(subCluster.getName());
+					for (File file : subCluster.listFiles(filter)) {
+						if (file.getName().equals("cross_doc_coref.xml")) {
+							String source = file.getPath();
+							Scanner scanner = new Scanner(new File(source));
+							String text = scanner.useDelimiter("\\Z").next();
+							scanner.close();
+							text = text.replace("-lrb-", "(")
+									.replace("-rrb-", ")")
+									.replace("-lsb-", "[")
+									.replace("-rsb-", "]")
+									.replace("�", "*UNK*")
+									.replace("&", "*AND*")
+									.replace("</document>", "\n</document>")
+									.replace("instance_id:", "instance_id=");
+							String heading = String.format("<document doc_id=\"%s\">%n", source.split("/")[source.split("/").length-1]);
+							if (!text.startsWith(heading)) {
+								text = heading + text;
+							}
+							if (!text.endsWith("</document>")) {
+								text += "\n</document>";
+							}
+							PrintWriter w1 = new PrintWriter(source);
+							w1.println(text);
+							w1.close();
+						} else {
+							System.out.println(file.getName());
+							String source = file.getPath();
+							String origin = "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/"+cluster.getName()+"/";
+							if (file.getName().contains("Lemmas")) {
+								origin += (file.getName().substring(0, file.getName().length()-10)+".xml");
+							} else {
+								origin += file.getName();
+							}
+							addMId(source, source, origin);
+						}
+					}
+				}
+			}
+		}*/
+		
+		/*
+		String source = "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/MyCorpus/4_1ecbplus.xml";
+		String dest = "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/MyCorpus/4_1ecbplusNew.xml";
+		String origin = "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/4/4_1ecbplus.xml";
+		addMId(source, source, origin);
+		/*DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		DocumentBuilder db = dbf.newDocumentBuilder();
+		Document doc = db.parse(new File(path));
+		Node textNode = doc.getElementsByTagName("text").item(0);
+		//System.out.println(textNode.getNodeName());
+		//System.out.println(textNode.getTextContent());
+		// list of all mentions
+		NodeList mts = doc.getElementsByTagName("mentions");
+		System.out.println(mts.item(0));
+		System.out.println(mts.item(1));
+		// #text parent, child1, #text child1, ...
+		NodeList spans = mts.item(0).getChildNodes();
+		Node span = spans.item(0);
+		System.out.println(span.getNodeName());
+		Node span2 = spans.item(1);
+		System.out.println(span2.getNodeName());
+		System.out.println(span2.getAttributes().item(0));
+		System.out.println(span2.getAttributes().item(1));
+		System.out.println(spans.getLength());
+		System.out.println(spans.item(2).getNodeName());
+		// after casting, able to get attribute by attribute name
+		Element span2Ele = (Element) span2;
+		System.out.println(span2Ele.getAttribute("m_id"));
+		
+		/*init();
+		String filename = "14_5ecb.xml";
+		File file = new File("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/14/" + filename);
+		readCorpus(file);
+		String text = Joiner.on(" ").join(_cluster.get(filename));
+		for (int i=0; i<text.split(" ").length; i++) {
+			System.out.print(text.split(" ")[i] + " " + i + "  ");
+		}
+		System.out.println();
+		//System.out.println("text length = " + text.split(" ").length);
+		String l = lemmatize(text);
+		for (int i=0; i<l.split(" ").length; i++) {
+			System.out.print(l.split(" ")[i] + " " + i + "  ");
+		}
+		System.out.println();
+		//System.out.println("lemmas length = " + l.split(" ").length);
 		
 		init();
 		File dir = new File("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/MyCorpus");
 		if (!dir.exists()) {dir.mkdir();}
 		
-		for (int i=2; i<=45; i++) {
+		for (int i=2; i<=30; i++) {
 			if (i==15 || i==17) {
 				continue;
 			}
 			mainWrapper(i);
 		}
-		printErrorFiles("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/MyCorpus/ErrorsLog.txt");
+		printErrorFiles("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/MyCorpus/ErrorsLog3.txt");*/
+	}
+	
+	private static void addMId(String source, String dest, String origin) throws SAXException, IOException, ParserConfigurationException {
+		Scanner scanner = new Scanner(new File(source));
+		String text = scanner.useDelimiter("\\Z").next();
+		scanner.close();
+		text = text.replace("-lrb-", "(")
+				.replace("-rrb-", ")")
+				.replace("-lsb-", "[")
+				.replace("-rsb-", "]")
+				.replace("�", "*UNK*")
+				.replace("&", "*AND*");
+		String heading = String.format("<document doc_id=\"%s\">%n", source.split("/")[source.split("/").length-1]);
+		if (!text.startsWith(heading)) {
+			text = heading + text;
+		}
+		if (!text.endsWith("</document>")) {
+			text += "</document>";
+		}
+		PrintWriter w1 = new PrintWriter(source);
+		w1.println(text);
+		w1.close();
+		
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		DocumentBuilder db = dbf.newDocumentBuilder();
+		Document doc = db.parse(new File(source));
+		Document originalDoc = db.parse(new File(origin));
+		NodeList originalMentions = originalDoc
+				.getElementsByTagName("Markables")
+				.item(0)
+				.getChildNodes();
+		
+		PrintWriter w2 = new PrintWriter(dest);
+		w2.print(text.substring(0, text.indexOf("<mentions>")));
+		w2.println("<mentions>");
+		NodeList spans = doc.getElementsByTagName("span");
+		for (int i=0; i<spans.getLength(); i++) {
+			Element span = (Element) spans.item(i);
+			String m_id = span.getAttribute("m_id");
+			String id = span.getAttribute("id");
+			String attr = "";
+			for (int j=1; j<originalMentions.getLength(); j+=2) {
+				Element node = (Element) originalMentions.item(j);
+				if (node.getChildNodes().getLength() > 1 && 
+						node.getAttribute("m_id").equals(m_id.split("/")[1])) {
+					attr = node.getNodeName();
+				}
+			}
+			w2.format("  <span m_id=\"%s\" id=\"%s\" attr=\"%s\">%s</span>%n", m_id, id, attr, span.getTextContent());
+		}
+		w2.println("</mentions>");
+		w2.println("</document>");
+		w2.close();
+	}
+	
+	private static void manuallyClean() throws IOException, ParserConfigurationException, SAXException {
+		File errors = new File("/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/MyCorpus/ErrorsLog.txt");
+		BufferedReader r = new BufferedReader(new FileReader(errors));
+		String sourcePath = "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/MyCorpus/tempFolder/";
+		String origPath = "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/ECB+/";
+		String destPath = "/Users/Qiheng/Desktop/Summer 2015/ECB_corpus/MyCorpus/";
+		String line = "";
+		while ((line=r.readLine()) != null) {
+			System.out.println(line);
+			readCorpus(new File(origPath + line.split("_")[0] + "/" + line));
+			@SuppressWarnings("resource")
+			String lemma = new Scanner(new File(sourcePath+line.substring(0, line.length()-4)+"Lemmas.xml"))
+								.useDelimiter("\\Z").next();
+			String[] lemmas = lemma.split(" ");
+			int index = 0;
+			ArrayList<String> temp = new ArrayList<String>();
+			for (String segment : _cluster.get(line)) {
+				int len = segment.split(" ").length;
+				if (len==1) {
+					temp.add(lemmas[index]);
+				} else {
+					temp.add(Joiner.on(" ").join(Arrays.copyOfRange(lemmas, index, index+len)));
+				}
+				index += len;
+			}
+			if (index != lemmas.length) {
+				System.err.println("ERROR: lemmas was not read till the end");
+				System.exit(0);
+			}
+			_cluster.put(line, temp);
+			
+			// update mentions
+			for (MentionSpan ms : _annotation.get(line).values()) {
+				if (!ms.getTId().contains(" ")) {
+					ms.setContent(temp.get(Integer.parseInt(ms.getTId())-1));
+				} else {
+					String[] ids = ms.getTId().split(" ");
+					ms.setContent(Joiner.on(" ").join(temp.subList(Integer.parseInt(ids[0])-1, 
+							Integer.parseInt(ids[ids.length-1])-1)));
+				}
+			}
+			//destPath/clusterNum/ecb/filename
+			String path = destPath+line.split("_")[0]+"/";
+			if (line.contains("plus")) {
+				path += ("ecb/" + line.substring(0, line.length()-4)+"Lemmas.xml");
+			} else {
+				path += ("ecbplus/" + line.substring(0, line.length()-4)+"Lemmas.xml");
+			}
+			rewriteCorpus(path, line);
+		}
+		r.close();
+		
+		
+		/*BufferedReader r2 = new BufferedReader(new FileReader(errors));
+		while ((line=r2.readLine()) != null) {
+			//System.out.println(line);
+			tempLemmatizeWrapper(path + line.substring(0, line.length()-4) + "Lemmas.xml", line);
+		}
+		r2.close();*/
+	}
+	
+	private static void tempLemmatizeWrapper(String outputpath, String filename) throws FileNotFoundException {
+		System.out.println(filename + "    in LWrapper");
+		// doc text
+		String text = Joiner.on(" ").join(_cluster.get(filename));
+		// lemma array
+		String[] lemmas = lemmatize(text).split(" ");
+		PrintWriter w = new PrintWriter(outputpath);
+		for (String s : lemmas) {
+			w.print(s + " ");
+		}
+		w.println();
+		w.println("text -- " + text.split(" ").length);
+		w.println("lemmas -- " + lemmas.length);
+		w.close();
 	}
 	
 	private static void mainWrapper(int cluster) throws ParserConfigurationException, SAXException, IOException {
@@ -125,7 +361,7 @@ public class cleanseData {
 	}
 	
 	// read tokens and annotations from XML files, as per cluster
-	public static void readCorpus(File file) throws ParserConfigurationException, SAXException, IOException {
+	private static void readCorpus(File file) throws ParserConfigurationException, SAXException, IOException {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		DocumentBuilder db = dbf.newDocumentBuilder();
 		Document doc = db.parse(file);
@@ -290,7 +526,7 @@ public class cleanseData {
 		writer.println("\n</text>\n");
 		writer.println("<mentions>");
 		for (MentionSpan ms : _annotation.get(filename).values()) {
-			writer.format("    <span m_id=\"%s\" id=\"%s\">", ms.getMId(), ms.getTId());
+			writer.format("    <span m_id=\"%s\" id=\"%s\" attr=\"%s\">", ms.getMId(), ms.getTId(), ms.getAttribute());
 			writer.print(ms.getContent());
 			writer.println("</span>");
 		}
@@ -303,7 +539,7 @@ public class cleanseData {
 		for (String note : _coref.keySet()) {
 			writer.format("<note instance_id:\"%s\">%n", note);
 			for (MentionSpan ms : _coref.get(note).values()) {
-				writer.format("  <span m_id=\"%s\" id=\"%s\">", ms.getMId(), ms.getTId());
+				writer.format("  <span m_id=\"%s\" id=\"%s\" attr=\"%s\">", ms.getMId(), ms.getTId(), ms.getAttribute());
 				writer.print(ms.getContent());
 				writer.println("</span>");
 			}

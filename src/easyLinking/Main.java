@@ -42,47 +42,22 @@ import edu.stanford.nlp.util.IntPair;
 public class Main {
 	
 	public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException {
-		for (String s : "//2".split("/")) {
-			System.out.println(s);
-		}
-		
-		
-		/*
-	    Properties props = new Properties();
-	    props.setProperty("annotators", "tokenize, ssplit, pos, lemma, ner, parse, dcoref");
-	    StanfordCoreNLP pipeline = new StanfordCoreNLP(props);
-	    //String text = "Sam is a man. He's awesome. He'd like to eat. His head is red. His friends do not like him.";
-	    String text = "I'm.";
-	    Annotation document = new Annotation(text);
-	    pipeline.annotate(document);
-	    List<CoreMap> sentences = document.get(SentencesAnnotation.class);
-	    
-	    for(CoreMap sentence: sentences) {
-	    	
-	        for (CoreLabel token: sentence.get(TokensAnnotation.class)) {
-	            String word = token.get(TextAnnotation.class);
-	            System.out.println(word);
-	            System.out.println("-----------");
-	        }
-	        System.out.println("xxxxxxxx");
-	    }
-	    
-	    
-	    Map<Integer, CorefChain> graph = document.get(CorefChainAnnotation.class);
-	    System.out.println(graph.entrySet().size() + "  is the size");
-	    for(Map.Entry<Integer, CorefChain> entry : graph.entrySet()) {
-	    	CorefChain c = entry.getValue();
-	    	CorefMention cm = c.getRepresentativeMention();
-	    	System.out.println(cm.mentionSpan + " repr mSpan");
-	    	System.out.println(cm.startIndex + " repr startIndex");
-	    	for (Entry<IntPair, Set<CorefMention>> cms : c.getMentionMap().entrySet()) {
-	    		for (CorefMention m : cms.getValue()) {
-	    			System.out.println(m.mentionSpan);
-	    			
-	    		}
-	    		
-	    	}
-	    	System.out.println("________");
-	    }*/
+		IdenticalWordsAlignmentModel model = new IdenticalWordsAlignmentModel();
+		PhraseLengthCapping plc = new PhraseLengthCapping();
+		Synonyms syno = new Synonyms();
+		WordNet wn = new WordNet();
+		BaselineTraining.train(model, plc, syno);
+		System.out.println("\n\n==============================\n\n");
+		Testing.testing(model,plc,syno);
+		model.report("/Users/Qiheng/Desktop/Summer 2015/experiment/model_report_allFiles.txt");
+		plc.report("/Users/Qiheng/Desktop/Summer 2015/experiment/plc_report_allFiles.txt");
+		System.out.println(syno);
 	}
 }
+
+/*
+ * next step:
+ * 1. 
+ * 2. stratify _model as per POS tags
+ * 3. design a computational model
+ */

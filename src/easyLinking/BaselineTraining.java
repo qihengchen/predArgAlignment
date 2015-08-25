@@ -102,11 +102,11 @@ public class BaselineTraining {
 		for (int i=1; i<mentionList.getLength()-1; i+=2) {   // ?
 			Element ms = (Element) mentionList.item(i);
 			String m_id=ms.getAttribute("m_id"), id=ms.getAttribute("id"),
-					attr=ms.getAttribute("attr"), content=ms.getTextContent().trim();
+					attr=ms.getAttribute("attr"), content=ms.getTextContent().trim(), pos=ms.getAttribute("pos");
 			if (attr.contains("ACTION") || attr.contains("NEG")) {
-				_annotation.put(m_id, new MentionSpan(m_id, id, content, "pred"));
+				_annotation.put(m_id, new MentionSpan(m_id, id, content, "pred", pos));
 			} else {
-				_annotation.put(m_id, new MentionSpan(m_id, id, content, "arg"));
+				_annotation.put(m_id, new MentionSpan(m_id, id, content, "arg", pos));
 			}
 		}
 		
@@ -207,12 +207,14 @@ public class BaselineTraining {
 						//if (!m_id2.contains("_1ecb")){ // && mentions.get(m_id2).getAttribute().equals("pred")) {
 							_G.add(m_id + " -> " + m_id2);
 								
-								int left = _annotation.get(m_id).getContent().split(" ").length;
-								int right = _annotation.get(m_id2).getContent().split(" ").length;
+								MentionSpan ms = _annotation.get(m_id);
+								MentionSpan ms2 = _annotation.get(m_id2);
+								int left = ms.getContent().split(" ").length;
+								int right = ms2.getContent().split(" ").length;
 								_plc.addEntry(left, right);
 								
-								if (left==1 && right==1 & !_annotation.get(m_id).getLemma().equals
-										(_annotation.get(m_id2).getLemma())) {
+								if (left==1 && right==1 && !ms.getLemma().equals(ms2.getLemma()) && !ms.getPOS().equals("PRP") &&
+										ms2.getPOS().equals("PRP")) {
 									_syno.add(_annotation.get(m_id).getLemma(), _annotation.get(m_id2).getLemma());
 								}
 							

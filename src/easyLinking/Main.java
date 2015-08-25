@@ -48,7 +48,7 @@ public class Main {
 		WordNet wn = new WordNet();
 		BaselineTraining.train(model, plc, syno);
 		System.out.println("\n\n==============================\n\n");
-		Testing.testing(model,plc,syno);
+		Testing.testing(model,plc,syno,wn);
 		model.report("/Users/Qiheng/Desktop/Summer 2015/experiment/model_report_allFiles.txt");
 		plc.report("/Users/Qiheng/Desktop/Summer 2015/experiment/plc_report_allFiles.txt");
 		System.out.println(syno);
@@ -57,7 +57,8 @@ public class Main {
 
 /*
  * next step:
- * 1. 
+ * 1. add wordnet to testing -- done
  * 2. stratify _model as per POS tags
- * 3. design a computational model
+ * 3. get prob model of alignment conditioned on pos
+ * 4. design a computational model
  */

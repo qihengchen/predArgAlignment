@@ -9,7 +9,7 @@ public class MentionSpan {
 	
 	private String _content, _lemma;
 	private final String _attr, _m_id;
-	private String _t_id;
+	private String _t_id, _pos;
 	
 	public MentionSpan(String m_id, String attribute) {
 		// _content = content;
@@ -29,6 +29,14 @@ public class MentionSpan {
 		_attr = attribute;// P/A/""              final
 		_t_id = t_id;
 		_content = content;
+	}
+	
+	public MentionSpan(String m_id, String t_id, String content, String attribute, String pos) {
+		_m_id = m_id;  // doc/m_id               final
+		_attr = attribute;// P/A/""              final
+		_t_id = t_id;
+		_content = content;
+		_pos = pos;
 	}
 	
 	@Override
@@ -78,6 +86,14 @@ public class MentionSpan {
 		return _lemma;
 	}
 	
+	public void setPOS(String pos) {
+		_pos = pos;
+	}
+	
+	public String getPOS() {
+		return _pos;
+	}
+	
 	public boolean containsID(String that) {
 		for (String id : _t_id.split(" ")) {
 			if (id.equals(that)) {
@@ -85,5 +101,9 @@ public class MentionSpan {
 			}
 		}
 		return false;
+	}
+	
+	public boolean isPredicate() {
+		return _attr.equals("pred") || _attr.contains("ACTION") || _attr.contains("NEG");
 	}
 }

@@ -6,6 +6,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +24,8 @@ import org.xml.sax.SAXException;
 
 import com.google.common.collect.Sets;
 
+import edu.mit.jwi.item.POS;
+
 public class Testing {
 	
 	// {note: {m_id:ms}}
@@ -36,14 +39,16 @@ public class Testing {
 	private static IdenticalWordsAlignmentModel _model;
 	private static PhraseLengthCapping _plc;
 	private static Synonyms _syno;
+	private static WordNet _wn;
 	private static double _threshold;
 	private final static double _same=10299.0/(10299+20204);
 	private final static double _notSame=20204.0/(10299+20204);
 	
-	static void testing(IdenticalWordsAlignmentModel model, PhraseLengthCapping plc, Synonyms syno) throws ParserConfigurationException, SAXException, IOException {
+	static void testing(IdenticalWordsAlignmentModel model, PhraseLengthCapping plc, Synonyms syno, WordNet wn) throws ParserConfigurationException, SAXException, IOException {
 		_model = model;
 		_plc = plc;
 		_syno = syno;
+		_wn = wn;
 		_hasChain = true;
 		_threshold = 0.7;
 		int i = 37;
@@ -102,11 +107,11 @@ public class Testing {
 		for (int i=1; i<mentionList.getLength()-1; i+=2) {   // ?
 			Element ms = (Element) mentionList.item(i);
 			String m_id=ms.getAttribute("m_id"), id=ms.getAttribute("id"),
-					attr=ms.getAttribute("attr"), content=ms.getTextContent().trim();
+					attr=ms.getAttribute("attr"), content=ms.getTextContent().trim(), pos=ms.getAttribute("pos");
 			if (attr.contains("ACTION") || attr.contains("NEG")) {
-				_annotation.put(m_id, new MentionSpan(m_id, id, content, "pred"));
+				_annotation.put(m_id, new MentionSpan(m_id, id, content, "pred", pos));
 			} else {
-				_annotation.put(m_id, new MentionSpan(m_id, id, content, "arg"));
+				_annotation.put(m_id, new MentionSpan(m_id, id, content, "arg", pos));
 			}
 		}
 		
@@ -158,8 +163,7 @@ public class Testing {
 				for (MentionSpan ms : _annotation.values()) {
 					if (!ms.getMId().contains("_1ecb") && mention.getAttribute().equals(ms.getAttribute())) {
 						
-						if ((mention.equals(ms) && _model.prob(findOverlap(mention.getContent(), ms.getContent())) <= 0.9)
-							|| (mention.getAttribute().contains("ACTION") && ms.getAttribute().contains("ACTION") && _syno.isSynonym(mention.getLemma(), ms.getLemma()))){
+						if (shouldAlignLemmas(mention, ms)){
 							_H.add(mention.getMId() + " -> " + ms.getMId());
 							if (_hasChain) {
 								for (HashSet<String> hs : _chains) {
@@ -184,6 +188,20 @@ public class Testing {
 				}
 			}
 		}
+	}
+	
+	private static boolean shouldAlignLemmas(MentionSpan mention, MentionSpan ms) {
+		if (mention.equals(ms) && _model.prob(findOverlap(mention.getContent(), ms.getContent())) <= 0.7) {
+			return true;
+		} else if ( _syno.isSynonym(mention.getLemma(), ms.getLemma())) {
+			return true;//mention.isPredicate() && ms.isPredicate() &&
+		}
+		for (POS pos : new POS[]{POS.VERB, POS.NOUN, POS.ADJECTIVE, POS.ADVERB}) {
+			if (_wn.getSynonyms(mention.getLemma(), pos).contains(ms.getLemma())) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	private static boolean shouldAlign(MentionSpan mention, MentionSpan ms) {

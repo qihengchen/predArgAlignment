@@ -25,7 +25,8 @@ public class WordNet {
 		IDictionary dict = new Dictionary(url);
 		dict.open();
 		
-		IIndexWord idxWord = dict.getIndexWord("announce", POS.VERB);
+		// must feed in lemma + wn's pos tagging
+		IIndexWord idxWord = dict.getIndexWord("purchase", POS.NOUN);
 		IWordID wordID = idxWord.getWordIDs().get(0);  // 1st meaning
 		IWord word = dict.getWord(wordID);
 		System.out.println("Id = " + wordID);
@@ -54,12 +55,12 @@ public class WordNet {
 	}
 	
 	public List<String> getSynonyms(String token, POS pos) {
+		List<String> res = new ArrayList<String>();
 		IIndexWord idxWord = _dict.getIndexWord(token, pos);
+		if (idxWord == null) {return res;}
 		List<IWordID> wordIDs = idxWord.getWordIDs();  // 1st meaning
-		if (wordIDs == null) {return null;}
 		IWord word = _dict.getWord(wordIDs.get(0));
 		ISynset synset = word.getSynset();
-		List<String> res = new ArrayList<String>();
 		for (IWord w : synset.getWords()) {
 			res.add(w.getLemma());
 		}
